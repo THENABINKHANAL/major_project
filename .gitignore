@@ -1,0 +1,11 @@
+checkpoint
+det.txt
+gt.txt
+save_model_market1501.data-00000-of-00001
+save_model_market1501.index
+save_model_market1501.meta
+variables.data-00000-of-00001
+variables.index
+yolo4.h5
+/model_data/yolo4.h5
+/model_data/yolov4.weights
