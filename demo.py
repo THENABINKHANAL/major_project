@@ -37,17 +37,17 @@ import random
 
 import csv
 gt=[];
-with open('gt.txt') as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    line_count = 0
-    for row in csv_reader:
-        gt.append([])
-        for col in range(6):
-            if col<2:
-                gt[line_count].append(int(row[col]))
-            else:
-                gt[line_count].append(float(row[col]))
-        line_count=line_count+1
+#with open('gt.txt') as csv_file:
+#    csv_reader = csv.reader(csv_file, delimiter=',')
+#    line_count = 0
+#    for row in csv_reader:
+#        gt.append([])
+#        for col in range(6):
+#            if col<2:
+#                gt[line_count].append(int(row[col]))
+#            else:
+#                gt[line_count].append(float(row[col]))
+#        line_count=line_count+1
 
 screenWidth=GetSystemMetrics(0)
 screenHeight=GetSystemMetrics(1)
@@ -336,7 +336,7 @@ def main(yolo):
     writeVideo_flag = True
     asyncVideo_flag = False
 
-    file_path = ['vid_1.mp4','vid_2.mp4']
+    file_path = ['vid_1.mp4']
     #file_path = ['veed.mp4']
     cols=math.ceil(math.sqrt(len(file_path)))
     rows=math.ceil(len(file_path)/cols)
@@ -353,7 +353,7 @@ def main(yolo):
     cameras=[]
     prvTimes=[]
     localgloballink=[]
-    imgsSaved=1
+    imgsSaved=2
 
     for i in range(len(file_path)):
         video_captures.append(cv2.VideoCapture(file_path[i]))
@@ -387,6 +387,7 @@ def main(yolo):
 
     while True:
         allimages=[]
+        
         for index in range(len(file_path)):
             cur=time.time()
             ret, frame[index] = video_captures[index].read()  # frame shape 640*480*3
@@ -467,15 +468,14 @@ def main(yolo):
                     for z in range(len(cameras[index].PersonData)):
                         postions=len(cameras[index].PersonData[z].positions)-1
                         cov = np.cov(np.asarray(cameras[index].PersonData[z].positions).T)
-                        if(cameras[index].PersonData[z].kf==None):
-                            mahal=distance.mahalanobis([(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2],cameras[index].PersonData[z].positions[postions],cov)
-                        else:
-                            #mahal=distance.mahalanobis([cameras[index].PersonData[z].kf.calulatedmean[0],cameras[index].PersonData[z].kf.calulatedmean[2]],[(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2],cov)
-                            mahal=math.sqrt((cameras[index].PersonData[z].kf.calulatedmean[0]-(bbox[0]+bbox[2])/2)**2+(cameras[index].PersonData[z].kf.calulatedmean[2]-(bbox[1]+bbox[3])/2)**2)
-                            #mahal=getMahalanbolisDist(cameras[index].PersonData[z].positions,[(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
-                            mahal+=(np.sum(np.absolute(np.subtract(histogram_h,cameras[index].PersonData[z].histogram_h))))
+                        #mahal=(distance.mahalanobis([cameras[index].PersonData[z].kf.calulatedmean[0],cameras[index].PersonData[z].kf.calulatedmean[2]],[(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2],cov))/ frame[index].shape[0]
+                        mahal=math.sqrt((cameras[index].PersonData[z].positions[postions][0]-(bbox[0]+bbox[2])/2)**2+(cameras[index].PersonData[z].positions[postions][1]-(bbox[1]+bbox[3])/2)**2)/ frame[index].shape[0]
+                        #mahal=math.sqrt((cameras[index].PersonData[z].kf.calulatedmean[0]-(bbox[0]+bbox[2])/2)**2+(cameras[index].PersonData[z].kf.calulatedmean[1]-(bbox[1]+bbox[3])/2)**2)/ frame[index].shape[0]
+                        #mahal=getMahalanbolisDist(cameras[index].PersonData[z].positions,[(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
+                        mahal+=(np.sum(np.absolute(np.subtract(histogram_h,cameras[index].PersonData[z].histogram_h))))
                         hungarianmatrix[indexx].append(mahal)
                     indexx=indexx+1
+                print(hungarianmatrix)
             if(nodata!=0):
                 row_ind=[]
                 col_ind=[]
@@ -483,7 +483,7 @@ def main(yolo):
                     row_ind, col_ind = linear_sum_assignment(hungarianmatrix)
                 indexx=0;
                 for pos in range(len(col_ind)):
-                    if(hungarianmatrix[row_ind[pos]][col_ind[pos]]<100):
+                    if(hungarianmatrix[row_ind[pos]][col_ind[pos]]<2-detections[row_ind[pos]].confidence):
                         bbox=detections[row_ind[pos]].to_tlbr()
                         detections[row_ind[pos]].localProcessed=True
                         cameras[index].PersonData[col_ind[pos]].updated=True
@@ -493,7 +493,8 @@ def main(yolo):
                         cameras[index].PersonData[col_ind[pos]].lastPosition=bbox
                         cameras[index].PersonData[col_ind[pos]].positions.append([(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
                         hsvCroppedImage=hsvImage[int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])]
-                        cameras[index].PersonData[col_ind[pos]].histogram_h = np.add(np.multiply(cv2.calcHist([hsvCroppedImage],[0],None,[180],[0,180]),0.5*1/(((bbox[3]-bbox[1])*(bbox[2]-bbox[0])))),np.multiply(cameras[index].PersonData[col_ind[pos]].histogram_h,0.25))
+                        toadd=detections[row_ind[pos]].confidence-0.7
+                        cameras[index].PersonData[col_ind[pos]].histogram_h = np.add(np.multiply(cv2.calcHist([hsvCroppedImage],[0],None,[180],[0,180]),toadd*1/(((bbox[3]-bbox[1])*(bbox[2]-bbox[0])))),np.multiply(cameras[index].PersonData[col_ind[pos]].histogram_h,1-toadd))
                         if(len(cameras[index].PersonData[col_ind[pos]].positions)>6):
                             cameras[index].PersonData[col_ind[pos]].positions.pop(0);
 
@@ -524,14 +525,15 @@ def main(yolo):
                         cameras[index].PersonData.append(ndata)
 
             #allimages.append([])
-            for pdata in cameras[index].PersonData:
-                if(pdata.updated):
-                    nimg=cv2.resize(frame[index][int(pdata.lastPosition[1]):int(pdata.lastPosition[3]),int(pdata.lastPosition[0]):int(pdata.lastPosition[2])], (64,128
-                    ), interpolation = cv2.INTER_AREA)
-                    #allimages[len(allimages)-1].append(np.array(nimg))
-                    pdata.imgs.append(nimg);
-                    if(len(pdata.imgs)==imgsSaved+1):
-                        pdata.imgs.pop(0)
+            if(len(file_path))!=1:
+                for pdata in cameras[index].PersonData:
+                    if(pdata.updated):
+                        nimg=cv2.resize(frame[index][int(pdata.lastPosition[1]):int(pdata.lastPosition[3]),int(pdata.lastPosition[0]):int(pdata.lastPosition[2])], (64,128
+                        ), interpolation = cv2.INTER_AREA)
+                        #allimages[len(allimages)-1].append(np.array(nimg))
+                        pdata.imgs.append(nimg);
+                        if(len(pdata.imgs)==imgsSaved+1):
+                            pdata.imgs.pop(0)
             #nabin's code ends
 
             if tracking:
@@ -560,22 +562,23 @@ def main(yolo):
             #        cv2.putText(frame[1], chr(ord('a')+row),(int(cameras[1].PersonData[col_ind[row]].positions[len(cameras[1].PersonData[col_ind[row]].positions)-1][0]), int(cameras[1].PersonData[col_ind[row]].positions[len(cameras[1].PersonData[col_ind[row]].positions)-1][1])),0, 5e-3 * 200, (0,255,0),2)
 
         if(len(cameras)==1):
-            hypos=[];
-            hyposPos=[];
+            #hypos=[];
+            #hyposPos=[];
             for person in cameras[0].PersonData:
-                cv2.putText(frame[0],str(person.localPersonIndex) ,(int(person.positions[len(person.positions)-1][0]), int(person.positions[len(person.positions)-1][1])),0, 1e-3 * frame[index].shape[0], (0,255,0),1)
                 if(person.updated==True):
-                    hypos.append(person.localPersonIndex+1)
-                    hyposPos.append([person.top,person.left])
-            gts=[]
-            gtsPos=[]
-            while gt[gtIndex][0]==curFrame and gtIndex<len(gt):
-                gts.append(gt[gtIndex][1])
-                gtsPos.append([gt[gtIndex][2],gt[gtIndex][3]])
-                gtIndex=gtIndex+1
-            curFrame=curFrame+1
-            dis=mm.distances.norm2squared_matrix(np.array(gtsPos), np.array(hyposPos))
-            acc.update(gts,hypos,dis)
+                    cv2.putText(frame[0],str(person.localPersonIndex) ,(int(person.positions[len(person.positions)-1][0]), int(person.positions[len(person.positions)-1][1])),0, 1e-3 * frame[index].shape[0], (0,255,0),1)
+            #    if(person.updated==True):
+            #        hypos.append(person.localPersonIndex+1)
+            #        hyposPos.append([person.top,person.left])
+            #gts=[]
+            #gtsPos=[]
+            #while gt[gtIndex][0]==curFrame and gtIndex<len(gt):
+            #    gts.append(gt[gtIndex][1])
+            #    gtsPos.append([gt[gtIndex][2],gt[gtIndex][3]])
+            #    gtIndex=gtIndex+1
+            #curFrame=curFrame+1
+            #dis=mm.distances.norm2squared_matrix(np.array(gtsPos), np.array(hyposPos))
+            #acc.update(gts,hypos,dis)
 
         else:
             edges=[]
@@ -604,6 +607,7 @@ def main(yolo):
                         for pdata in range(len(cameras[j].PersonData)):
                             if(cameras[j].PersonData[pdata].updated==False or len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
                                 continue
+                            #globalHungarian[x].append(triplet[y])
                             globalHungarian[x].append(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))*2+triplet[y])
                             if(x==0):
                                 yindexes.append(pdata)
