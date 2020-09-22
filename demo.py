@@ -360,7 +360,7 @@ def main(yolo):
     #array to link local index to global person index
     localgloballink=[]
     #number of images saved after a person has been tracked in a single camera
-    imgsSaved=2
+    imgsSaved=6
 
     #initializing cameras and video_capture variables
     for i in range(len(file_path)):
@@ -637,7 +637,8 @@ def main(yolo):
                             if(cameras[j].PersonData[pdata].updated==False or len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
                                 continue
                             #globalHungarian[x].append(triplet[y])
-                            globalHungarian[x].append(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))*2+triplet[y])
+                            globalHungarian[x].append((np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))+triplet[y])/(0.9+1.4*imgsSaved))#hsv seems to be max 0.9, triplet max seems to be 1.2
+
                             if(x==0):
                                 yindexes.append(pdata)
                             #globalHungarian[fdata].append(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h))))
@@ -648,7 +649,7 @@ def main(yolo):
                         row_ind, col_ind = linear_sum_assignment(globalHungarian)
                         print(globalHungarian)
                         for pos in range(len(row_ind)):
-                            if(globalHungarian[row_ind[pos]][col_ind[pos]]<4):
+                            if(globalHungarian[row_ind[pos]][col_ind[pos]]<0.85):
                                 edges.append((cameras[i].PersonData[xindexes[row_ind[pos]]].globalPersonIndex,cameras[j].PersonData[yindexes[col_ind[pos]]].globalPersonIndex))
             
             Allcliques=cliques(edges,len(cameras),globalPersonCount).getCliques()
