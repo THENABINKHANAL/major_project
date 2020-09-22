@@ -335,13 +335,15 @@ def main(yolo):
     tracking = False
     writeVideo_flag = True
     asyncVideo_flag = False
-
-    file_path = ['vid_1.mp4']
-    #file_path = ['veed.mp4']
+    #file path for videos input
+    file_path = ['vid_1.mp4','vid_2.mp4']
+    #calulating number of row and columns based on number of videos input
     cols=math.ceil(math.sqrt(len(file_path)))
     rows=math.ceil(len(file_path)/cols)
+    #calulating single video hwight and width based on number of rows/cols and screen width/height
     singleHeight=int(screenHeight/rows)
     singleWidth=int(screenWidth/cols)
+    #out_image sent to the screen and file written
     out_image=np.zeros((screenHeight,screenWidth,3), np.uint8)
 
     #if asyncVideo_flag :
@@ -349,56 +351,74 @@ def main(yolo):
     #else:
     #    video_capture = cv2.VideoCapture(file_path)
 
+    #videos reference to get index later
     video_captures = []
+    #number of videos/cameras fed. Used to save person data
     cameras=[]
-    prvTimes=[]
+    #previous time kalman filter was processed
+    #prvTimes=[]
+    #array to link local index to global person index
     localgloballink=[]
+    #number of images saved after a person has been tracked in a single camera
     imgsSaved=2
 
+    #initializing cameras and video_capture variables
     for i in range(len(file_path)):
         video_captures.append(cv2.VideoCapture(file_path[i]))
         cameras.append(Camera())
-        prvTimes.append(time.time())
+        #prvTimes.append(time.time())
 
     #if asyncVideo_flag:
     #    video_capture.start()
 
     if writeVideo_flag:
-        if asyncVideo_flag:
-            w = int(video_capture.cap.get(3))
-            h = int(video_capture.cap.get(4))
-            h = int(video_capture.cap.get(4))
-        else:
-            w = screenWidth
-            h = screenHeight
+        #if asyncVideo_flag:
+        #    w = int(video_capture.cap.get(3))
+        #    h = int(video_capture.cap.get(4))
+        #else:
+        #setting width and height of video file written
+        w = screenWidth
+        h = screenHeight
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter('output_yolov4.avi', fourcc, 30, (w, h))
+        #number of frames processed till now
         frame_index = -1
 
+    #fps
     fps = 0.0
     fps_imutils = imutils.video.FPS().start()
+    #frames found in the current run
     frame=[]
-    globalPersonCount=1
+    #initializing the frame variables
     for file in file_path:
         frame.append(None)
 
-    curFrame=1;
-    gtIndex=0;
+    #the global person count
+    globalPersonCount=1
+    #frame count for testing with motmetrics
+    #curFrame=1;
+    #global person index
+    #gtIndex=0;
 
     while True:
-        allimages=[]
+        #image saved in current run
+        #allimages=[]
         
         for index in range(len(file_path)):
-            cur=time.time()
+            #getting current time for kalman filter
+            #cur=time.time()
+            #reading a frame from video
             ret, frame[index] = video_captures[index].read()  # frame shape 640*480*3
             if ret != True:
                  break
-
+            #getting current time for file output
             t1 = time.time()
-
+            #changing image from bgr to rgb
             image = Image.fromarray(frame[index][...,::-1])  # bgr to rgb
+            #running yolo
             boxes, confidence, classes = yolo.detect_image(image)
-
+            
+            #Getting bounding boxes from image data
             if tracking:
                 features = encoder(frame[index], boxes)
 
@@ -413,7 +433,9 @@ def main(yolo):
             scores = np.array([d.confidence for d in detections])
             indices = preprocessing.non_max_suppression(boxes, nms_max_overlap, scores)
             detections = [detections[i] for i in indices]
-
+            #Got bounding boxes from image data
+            
+            #writing person detection accuracy and putting a bounding boxes around people
             for det in detections:
                 bbox = det.to_tlbr()
                 score = "%.2f" % round(det.confidence * 100, 2) + "%"
@@ -423,34 +445,41 @@ def main(yolo):
                     cv2.putText(frame[index], str(cls) + " " + score, (int(bbox[0]), int(bbox[3])), 0,
                                 1e-3 * frame[index].shape[0], (0, 255, 0), 1)
 
-            #nabin's code
+            #changing rgb image data to hsv for hsv histogram
             hsvImage = cv2.cvtColor(frame[index], cv2.COLOR_BGR2HSV)
 
+            #the local hungarian matrix
             hungarianmatrix=[]
+            #index for hungerian matrix
             indexx=0
-            if(len(cameras[index].PersonData)>0):
-                diff=cur-prvTimes[index]
-                times=int(diff/0.05)
-                prvTimes[index]=cur
-                for data in cameras[index].PersonData:
-                    if(data.kf!=None):
-                        for i in range(times):
-                            data.kf.predict()
+            #if(len(cameras[index].PersonData)>0):
+            #    diff=cur-prvTimes[index]
+            #    times=int(diff/0.05)
+            #    prvTimes[index]=cur
+            #    for data in cameras[index].PersonData:
+            #        if(data.kf!=None):
+            #            for i in range(times):
+            #                data.kf.predict()
+            #checking the number of previous person data stored
             nodata=len(cameras[index].PersonData);
+            #Setting all person updated variable to false
             for z in range(len(cameras[index].PersonData)):
                 cameras[index].PersonData[z].updated=False;
+            #iterating through current detections
             for det in detections:
+                #getting top, left, bottom and right co-ordinated from bounding boxes
                 bbox = det.to_tlbr()
+                #checking if there was no previous person data, initializing all found out persons directly to camera's person data variable
                 if(nodata==0):
                     persondata=PersonData()
-                    persondata.color=[int(random.randint(0,255)),int(random.randint(0,255)),int(random.randint(0,255))]
+                    #persondata.color=[int(random.randint(0,255)),int(random.randint(0,255)),int(random.randint(0,255))]
                     persondata.positions.append([(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
                     persondata.positions.append([(bbox[0]+bbox[2])/2+0.1,(bbox[1]+bbox[3])/2+0.1])
-                    persondata.top=bbox[0]
-                    persondata.left=bbox[1]
+                    #persondata.top=bbox[0]
+                    #persondata.left=bbox[1]
                     persondata.lastPosition=bbox
                     persondata.localPersonIndex=cameras[index].localPersonCount;
-                    persondata.kf=KF(persondata.positions[0][0],persondata.positions[0][1],0,0)
+                    #persondata.kf=KF(persondata.positions[0][0],persondata.positions[0][1],0,0)
                     persondata.globalPersonIndex=globalPersonCount;
                     localgloballink.append([globalPersonCount,index,persondata.localPersonIndex])
                     globalPersonCount=globalPersonCount+1
@@ -475,7 +504,7 @@ def main(yolo):
                         mahal+=(np.sum(np.absolute(np.subtract(histogram_h,cameras[index].PersonData[z].histogram_h))))
                         hungarianmatrix[indexx].append(mahal)
                     indexx=indexx+1
-                print(hungarianmatrix)
+                #print(hungarianmatrix)
             if(nodata!=0):
                 row_ind=[]
                 col_ind=[]
@@ -489,7 +518,7 @@ def main(yolo):
                         cameras[index].PersonData[col_ind[pos]].updated=True
                         cameras[index].PersonData[col_ind[pos]].top=bbox[0]
                         cameras[index].PersonData[col_ind[pos]].left=bbox[1]
-                        cameras[index].PersonData[col_ind[pos]].kf.update([(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
+                        #cameras[index].PersonData[col_ind[pos]].kf.update([(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
                         cameras[index].PersonData[col_ind[pos]].lastPosition=bbox
                         cameras[index].PersonData[col_ind[pos]].positions.append([(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
                         hsvCroppedImage=hsvImage[int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])]
@@ -508,7 +537,7 @@ def main(yolo):
                         ndata.left=bbox[1]
                         ndata.positions.append([(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2])
                         ndata.positions.append([(bbox[0]+bbox[2])/2+0.1,(bbox[1]+bbox[3])/2+0.1])
-                        ndata.kf=KF((bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2,0,0)
+                        #ndata.kf=KF((bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2,0,0)
                         ndata.color=[int(random.randint(0,255)),int(random.randint(0,255)),int(random.randint(0,255))]
                         ndata.localPersonIndex=cameras[index].localPersonCount
                         ndata.lastPosition=bbox
@@ -619,7 +648,7 @@ def main(yolo):
                         row_ind, col_ind = linear_sum_assignment(globalHungarian)
                         print(globalHungarian)
                         for pos in range(len(row_ind)):
-                            if(globalHungarian[row_ind[pos]][col_ind[pos]]<3.2):
+                            if(globalHungarian[row_ind[pos]][col_ind[pos]]<4):
                                 edges.append((cameras[i].PersonData[xindexes[row_ind[pos]]].globalPersonIndex,cameras[j].PersonData[yindexes[col_ind[pos]]].globalPersonIndex))
             
             Allcliques=cliques(edges,len(cameras),globalPersonCount).getCliques()
