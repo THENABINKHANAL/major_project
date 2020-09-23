@@ -399,8 +399,11 @@ def main(yolo):
     #curFrame=1;
     #global person index
     #gtIndex=0;
+    #variable to count the current images saved
+    cur_save_count=0
 
     while True:
+        cur_save_count=cur_save_count+1
         #image saved in current run
         #allimages=[]
         
@@ -486,10 +489,13 @@ def main(yolo):
                     cameras[index].localPersonCount=cameras[index].localPersonCount+1;
                     hsvCroppedImage=hsvImage[int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])]
                     persondata.histogram_h = cv2.calcHist([hsvCroppedImage],[0],None,[180],[0,180])
+                    #dividing the hisogram by area so that person bounding box area wont alter histogram values
                     persondata.histogram_h = np.divide(persondata.histogram_h,((bbox[3]-bbox[1])*(bbox[2]-bbox[0])))
+                    #adding newly created person object to camera
                     cameras[index].PersonData.append(persondata)
                 else:
                     hungarianmatrix.append([])
+                    #getting current hsv value from current frame
                     hsvCroppedImage=hsvImage[int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])]
                     histogram_h = cv2.calcHist([hsvCroppedImage],[0],None,[180],[0,180])
                     histogram_h = np.divide(histogram_h,((bbox[3]-bbox[1])*(bbox[2]-bbox[0])))
@@ -609,7 +615,8 @@ def main(yolo):
             #dis=mm.distances.norm2squared_matrix(np.array(gtsPos), np.array(hyposPos))
             #acc.update(gts,hypos,dis)
 
-        else:
+        else if(imgSaved==cur_save_count):
+            cur_save_count=0
             edges=[]
             globalHungarian=[]
             for i in range(len(cameras)):
@@ -693,6 +700,12 @@ def main(yolo):
             for sclique in Allcliques:
                 for i in range(len(sclique)):
                     cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].prvglobalFoundOutPersonIndex=cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].globalFoundOutPersonIndex
+            
+        else:
+            for cam in range(len(cameras)):
+                for person in cameras[cam].PersonData:
+                    if person.updated==True:
+                        cv2.putText(frame[cam],str(person.globalFoundOutPersonIndex) ,(int(person.positions[len(person.positions)-1][0]), int(person.positions[len(person.positions)-1][1])),0, 1e-3 * frame[index].shape[0], (0,255,0),2)
         out_image.fill(0)
         vindex=0;
         for row in range(rows):
