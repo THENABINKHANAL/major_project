@@ -615,7 +615,7 @@ def main(yolo):
             #dis=mm.distances.norm2squared_matrix(np.array(gtsPos), np.array(hyposPos))
             #acc.update(gts,hypos,dis)
 
-        else if(imgSaved==cur_save_count):
+        elif imgSaved==cur_save_count:
             cur_save_count=0
             edges=[]
             globalHungarian=[]
