@@ -631,10 +631,11 @@ def main(yolo):
                     for pos in range(imgsSaved):
                         stackedimgages.append([])
                         for person in cameras[j].PersonData:
-                            if(person.updated==True and len(person.imgs)==imgsSaved):
+                            if(len(person.imgs)==imgsSaved):
                                 stackedimgages[pos].append(person.imgs[pos])
                     for fdata in range(len(cameras[i].PersonData)):
-                        if(cameras[i].PersonData[fdata].updated==False or len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
+                        #if(cameras[i].PersonData[fdata].updated==False or len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
+                        if(len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
                             continue
                         xindexes.append(fdata)
                         curclique=[]
@@ -651,7 +652,8 @@ def main(yolo):
                             triplet=np.add(triplet,test(cameras[i].PersonData[fdata].imgs[pos],stackedimgages[pos]))
                         globalHungarian.append([])
                         for pdata in range(len(cameras[j].PersonData)):
-                            if(cameras[j].PersonData[pdata].updated==False or len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
+                            #if(cameras[j].PersonData[pdata].updated==False or len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
+                            if(len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
                                 continue
                             #globalHungarian[x].append(triplet[y])
                             val=(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))+triplet[y])/(0.9+1.4*imgsSaved)#hsv seems to be max 0.9, triplet max seems to be 1.2
@@ -676,7 +678,7 @@ def main(yolo):
 
             for cam in cameras:
                 for person in cam.PersonData:
-                    if len(person.imgs)!=imgsSaved:
+                    if len(person.imgs)!=imgsSaved or person.updated==False:
                         continue
                     isinclique=True
                     for clique in Allcliques:
