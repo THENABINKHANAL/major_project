@@ -402,6 +402,8 @@ def main(yolo):
     #variable to count the current images saved
     cur_save_count=0
 
+    prvGlobalIndexData=[]
+
     while True:
         cur_save_count=cur_save_count+1
         #image saved in current run
@@ -615,7 +617,7 @@ def main(yolo):
             #dis=mm.distances.norm2squared_matrix(np.array(gtsPos), np.array(hyposPos))
             #acc.update(gts,hypos,dis)
 
-        elif imgSaved==cur_save_count:
+        elif imgsSaved==cur_save_count:
             cur_save_count=0
             edges=[]
             globalHungarian=[]
@@ -635,6 +637,14 @@ def main(yolo):
                         if(cameras[i].PersonData[fdata].updated==False or len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
                             continue
                         xindexes.append(fdata)
+                        curclique=[]
+                        prvfoundout=-1
+                        if len(prvGlobalIndexData)!=0:
+                            for single in prvGlobalIndexData:
+                                if cameras[i].PersonData[fdata].globalPersonIndex in single:
+                                    curclique=single
+                                    prvfoundout=single[0]
+                                    break;
                         y=0
                         triplet=test(cameras[i].PersonData[fdata].imgs[0],stackedimgages[0])
                         for pos in range(1,imgsSaved):
@@ -644,7 +654,10 @@ def main(yolo):
                             if(cameras[j].PersonData[pdata].updated==False or len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
                                 continue
                             #globalHungarian[x].append(triplet[y])
-                            globalHungarian[x].append((np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))+triplet[y])/(0.9+1.4*imgsSaved))#hsv seems to be max 0.9, triplet max seems to be 1.2
+                            val=(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))+triplet[y])/(0.9+1.4*imgsSaved)#hsv seems to be max 0.9, triplet max seems to be 1.2
+                            if cameras[j].PersonData[pdata].globalPersonIndex in curclique or cameras[j].PersonData[pdata].prvglobalFoundOutPersonIndex==prvfoundout:
+                                val-=0.2
+                            globalHungarian[x].append(val)
 
                             if(x==0):
                                 yindexes.append(pdata)
@@ -663,6 +676,8 @@ def main(yolo):
 
             for cam in cameras:
                 for person in cam.PersonData:
+                    if len(person.imgs)!=imgsSaved:
+                        continue
                     isinclique=True
                     for clique in Allcliques:
 
@@ -672,11 +687,11 @@ def main(yolo):
                     if isinclique:
                         Allcliques.append([person.globalPersonIndex])
 
+            prvGlobalIndexData=[]
             for sclique in Allcliques:
                 indexes=[]
                 cur=min(sclique)
-
-                
+                prvGlobalIndexData.append([])
                 for i in range(len(sclique)):
                     isInclique=False
                     prvIndex=cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].prvglobalFoundOutPersonIndex
@@ -691,11 +706,15 @@ def main(yolo):
                         cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].globalFoundOutPersonIndex=cur
                     else:
                         cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].globalFoundOutPersonIndex=prvIndex
+                        prvGlobalIndexData[len(prvGlobalIndexData)-1].append(prvIndex)
+
+                    prvGlobalIndexData[len(prvGlobalIndexData)-1].append(sclique[i])
 
             for cam in range(len(cameras)):
                 for person in cameras[cam].PersonData:
                     if person.updated==True:
                         cv2.putText(frame[cam],str(person.globalFoundOutPersonIndex) ,(int(person.positions[len(person.positions)-1][0]), int(person.positions[len(person.positions)-1][1])),0, 1e-3 * frame[index].shape[0], (0,255,0),2)
+
             
             for sclique in Allcliques:
                 for i in range(len(sclique)):
