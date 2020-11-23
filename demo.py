@@ -569,7 +569,7 @@ def main(yolo):
                     persondata.lastPosition=bbox
                     persondata.localPersonIndex=cameras[index].localPersonCount;
                     #persondata.kf=KalmanFilter([[bbox[0]],[0],[persondata.positions[0][1]],[0]],0.25)
-                    persondata.kf=KalmanFilter([[0],[0],[0],[0]],0.05)
+                    persondata.kf=KalmanFilter([[0],[0],[0],[0]],0.07)
                     persondata.globalPersonIndex=globalPersonCount;
                     localgloballink.append([globalPersonCount,index,persondata.localPersonIndex])
                     globalPersonCount=globalPersonCount+1
@@ -681,7 +681,7 @@ def main(yolo):
                         ndata.lastPosition=bbox
                         ndata.lastFrame=frame_index
 
-                        ndata.kf=KalmanFilter([[0],[0],[0],[0]],0.05)
+                        ndata.kf=KalmanFilter([[0],[0],[0],[0]],0.07)
                         #ndata.kf=KalmanFilter([[bbox[0]],[0],[(bbox[1]+bbox[3])/2],[0]],0.25)
                         cameras[index].localPersonCount=cameras[index].localPersonCount+1
                         localgloballink.append([globalPersonCount,index,ndata.localPersonIndex])
@@ -767,7 +767,7 @@ def main(yolo):
                         for j in range(len(globalPersonData)):
                             if(globalPersonData[j].personzindexinCameras[k]==i):
                                 #if(cameras[k].PersonData[i].globaldissimilarity<0.3):
-                                decrement=(1/(1+1/cameras[k].PersonData[i].globalSameTimes))*0.4/(1+cameras[k].PersonData[i].globaldissimilarity*3)
+                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.4/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
                                 print("decrement ",decrement)
                                 globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-decrement)
                                 #else:                           
