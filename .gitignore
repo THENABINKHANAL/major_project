@@ -22,3 +22,5 @@ out2.mp4
 output_yolov4_1.avi
 output_yolov4_2.avi
 output_yolov4.avi
+*.avi
+*.mp4
