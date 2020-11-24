@@ -428,7 +428,7 @@ def main(yolo):
     #array to link local index to global person index
     localgloballink=[]
     #number of images saved after a person has been tracked in a single camera
-    imgsSaved=2
+    imgsSaved=1
 
     #initializing cameras and video_capture variables
     for i in range(len(file_path)):
@@ -436,6 +436,9 @@ def main(yolo):
         cameras.append(Camera())
         #prvTimes.append(time.time())
 
+    for h in range(400):
+        for i in range(len(video_captures)):
+            video_captures[i].read();
     #if asyncVideo_flag:
     #    video_capture.start()
 
@@ -517,11 +520,11 @@ def main(yolo):
             for det in detections:
                 bbox = det.to_tlbr()
                 score = "%.2f" % round(det.confidence * 100, 2) + "%"
-                cv2.rectangle(frame[index], (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
+                #cv2.rectangle(frame[index], (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
                 if len(classes) > 0:
                     cls = det.cls
-                    cv2.putText(frame[index], str(cls) + " " + score, (int(bbox[0]), int(bbox[3])), 0,
-                                1e-3 * frame[index].shape[0], (0, 255, 0), 1)
+                    #cv2.putText(frame[index], str(cls) + " " + score, (int(bbox[0]), int(bbox[3])), 0,
+                    #            1e-3 * frame[index].shape[0], (0, 255, 0), 1)
 
             #changing rgb image data to hsv for hsv histogram
             hsvImage = cv2.cvtColor(frame[index], cv2.COLOR_BGR2HSV)
@@ -542,7 +545,7 @@ def main(yolo):
                 cameras[index].PersonData[ind].updated=False;
                 score=frame_index-cameras[index].PersonData[ind].lastFrame;
                 kalman_pos=cameras[index].PersonData[ind].kf.x
-                cv2.putText(frame[index],str(cameras[index].PersonData[ind].localPersonIndex) ,(int(cameras[index].PersonData[ind].top+kalman_pos[0][0]*(score)), int(cameras[index].PersonData[ind].middle+kalman_pos[1][0]*(score))),0, 1e-3 * frame[index].shape[0], (0,0,255),1)
+                #cv2.putText(frame[index],str(cameras[index].PersonData[ind].localPersonIndex) ,(int(cameras[index].PersonData[ind].top+kalman_pos[0][0]*(score)), int(cameras[index].PersonData[ind].middle+kalman_pos[1][0]*(score))),0, 1e-3 * frame[index].shape[0], (0,0,255),1)
                 ypos=cameras[index].PersonData[ind].top-cameras[index].PersonData[ind].kf.x[0][0]*(score)
                 xpos=cameras[index].PersonData[ind].middle-cameras[index].PersonData[ind].kf.x[2][0]*(score)
                 if(xpos<0 or xpos>frame[index].shape[0] or ypos<0 or ypos>frame[index].shape[1] or cameras[index].PersonData[ind].totalFrames<5):
@@ -697,15 +700,16 @@ def main(yolo):
                         cameras[index].PersonData.append(ndata)
 
             #allimages.append([])
-            #if(len(file_path))!=1:
-            #    for pdata in cameras[index].PersonData:
-            #        if(pdata.updated):
-            #            nimg=cv2.resize(frame[index][int(pdata.lastPosition[1]):int(pdata.lastPosition[3]),int(pdata.lastPosition[0]):int(pdata.lastPosition[2])], (64,128
-            #            ), interpolation = cv2.INTER_AREA)
-            #            #allimages[len(allimages)-1].append(np.array(nimg))
-            #            pdata.imgs.append(nimg);
-            #            if(len(pdata.imgs)==imgsSaved+1):
-            #                pdata.imgs.pop(0)
+            if(len(file_path))!=1:
+                for pdata in cameras[index].PersonData:
+                    if(pdata.updated):
+                        nimg=cv2.resize(frame[index][int(pdata.lastPosition[1]):int(pdata.lastPosition[3]),int(pdata.lastPosition[0]):int(pdata.lastPosition[2])], (64,128
+                        ), interpolation = cv2.INTER_AREA)
+                        #allimages[len(allimages)-1].append(np.array(nimg))
+                        pdata.imgs.append(nimg);
+                        cv2.imwrite('color_img'+str(frame_index)+str(pdata.globalPersonIndex) +'.jpg', nimg)
+                        if(len(pdata.imgs)==imgsSaved+1):
+                            pdata.imgs.pop(0)
             #nabin's code ends
 
             if tracking:
@@ -801,6 +805,7 @@ def main(yolo):
                                 cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].globaldissimilarity=dissimilarity;
                                 cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].globaldissimilarity=dissimilarity;
                                 print(dissimilarity)
+                                print("imgval",test(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].imgs[0],[cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].imgs[0]]))
                                 if(dissimilarity<0.4):
                                     #singleglobalPersonData.histogram_h=np.add(np.multiply(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].histogram_h,0.5),np.multiply(cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].histogram_h,0.5))
                                     singleglobalPersonData.histogram_h=np.add(np.multiply(singleglobalPersonData.histogram_h,0.6),np.multiply(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].histogram_h,0.2),np.multiply(cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].histogram_h,0.2))
