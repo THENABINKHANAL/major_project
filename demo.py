@@ -405,7 +405,8 @@ def main(yolo):
     writeVideo_flag = True
     asyncVideo_flag = False
     #file path for videos input
-    file_path = ['vid_1.mp4','vid_2.mp4']
+    #file_path = ['4p-c0.avi','4p-c1.avi','4p-c2.avi','4p-c3.avi']
+    file_path = ['terrace1-c0.avi','terrace1-c1.avi','terrace1-c2.avi','terrace1-c3.avi']
     #calulating number of row and columns based on number of videos input
     cols=math.ceil(math.sqrt(len(file_path)))
     rows=math.ceil(len(file_path)/cols)
@@ -778,19 +779,20 @@ def main(yolo):
                                 print("decrement ",decrement)
                                 #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-decrement)
                                 #val=test(img,globalPersonData[j].personImages)
-                                #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5+np.sum(val)/len(globalPersonData[j].personImages)*0.5-decrement)
+                                #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5+np.sum(val)/(len(globalPersonData[j].personImages)*1.2)*0.5-decrement)
                                 globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5-decrement)
                                 #else:                           
                                 #    globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-(1/(1+1/cameras[k].PersonData[i].globalSameTimes))*0.1)
                             else:
                                 #val=test(img,globalPersonData[j].personImages)
-                                #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5+np.sum(val)/len(globalPersonData[j].personImages)*0.5)
+                                #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5+np.sum(val)/(len(globalPersonData[j].personImages)*1.2)*0.5)
                                 globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5)
                     for i in range(len(cameras[k].PersonData)):
                             cameras[k].PersonData[i].globalFoundOutPersonIndex=-1
 
                     if(len(globalHungarian)!=0):
                         row_ind, col_ind = assignValues(globalHungarian)
+                        print(globalHungarian);
                         for pos in range(len(row_ind)):
                             if(globalHungarian[row_ind[pos]][col_ind[pos]]<0.5):
                                 if(cameras[k].PersonData[rowsIndexes[row_ind[pos]]].prvglobalFoundOutPersonIndex==col_ind[pos]):
@@ -807,102 +809,115 @@ def main(yolo):
                                 globalPersonData[col_ind[pos]].personIndexes.append([k,rowsIndexes[row_ind[pos]]])
                     
                     for singleglobalPersonData in globalPersonData:
+                        matrix=np.full((len(singleglobalPersonData.personIndexes),len(singleglobalPersonData.personIndexes)),0.0)
                         for i in range(len(singleglobalPersonData.personIndexes)):
                             for j in range(i+1,len(singleglobalPersonData.personIndexes)):
                                 dissimilarity=cv2.compareHist(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].histogram_h, cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*1.5
-                                cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].globaldissimilarity=dissimilarity;
-                                cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].globaldissimilarity=dissimilarity;
-                                print(dissimilarity)
-                                #print("imgval",test(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].imgs[0],[cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].imgs[0]]))
-                                if(dissimilarity<0.4):
-                                    #singleglobalPersonData.histogram_h=np.add(np.multiply(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].histogram_h,0.5),np.multiply(cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].histogram_h,0.5))
-                                    singleglobalPersonData.histogram_h=np.add(np.multiply(singleglobalPersonData.histogram_h,0.6),np.multiply(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].histogram_h,0.2),np.multiply(cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].histogram_h,0.2))
+                                matrix[i][j]=dissimilarity
+                                matrix[j][i]=dissimilarity
+                        dissimilaritySum=np.divide(np.sum(matrix,0),len(singleglobalPersonData.personIndexes))
+
+                        for i in range(len(singleglobalPersonData.personIndexes)):
+                            cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].globaldissimilarity=dissimilaritySum[i]
+                            print(dissimilaritySum[i])
+                            #print("imgval",test(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].imgs[0],[cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].imgs[0]]))
+                            if(dissimilaritySum[i]<0.4):
+                                #singleglobalPersonData.histogram_h=np.add(np.multiply(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].histogram_h,0.5),np.multiply(cameras[singleglobalPersonData.personIndexes[j][0]].PersonData[singleglobalPersonData.personIndexes[j][1]].histogram_h,0.5))
+                                singleglobalPersonData.histogram_h=np.add(np.multiply(singleglobalPersonData.histogram_h,0.8),np.multiply(cameras[singleglobalPersonData.personIndexes[i][0]].PersonData[singleglobalPersonData.personIndexes[i][1]].histogram_h,0.2))
 
             cur_save_count=0
             edges=[]
             globalHungarian=[]
+            allfeatureVector=[]
             for i in range(len(cameras)):
-                for j in range(i+1,len(cameras)):
-                    globalHungarian=[]
-                    x=0
-                    xindexes=[]
-                    yindexes=[]
-                    stackedimgages=[]
-                    for pdata in range(len(cameras[j].PersonData)):
-                        if(cameras[j].PersonData[pdata].globalFoundOutPersonIndex!=-1 or cameras[j].PersonData[pdata].isDisabled or cameras[j].PersonData[pdata].totalFrames<5):
-                            continue;
-                        bbox=cameras[j].PersonData[pdata].lastPosition
-                        stackedimgages.append(cv2.resize(frame[j][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA))
-                    #for pos in range(imgsSaved):
-                    #    stackedimgages.append([])
-                    #    for person in cameras[j].PersonData:
-                    #        if(person.updated==True and len(person.imgs)==imgsSaved):
-                    #            stackedimgages[pos].append(person.imgs[pos])
-                    for fdata in range(len(cameras[i].PersonData)):
-                        if(cameras[i].PersonData[fdata].globalFoundOutPersonIndex!=-1 or cameras[i].PersonData[fdata].isDisabled or cameras[i].PersonData[fdata].totalFrames<5):
-                            continue;
-                        #if(cameras[i].PersonData[fdata].updated==False or len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
-                        #if(cameras[i].PersonData[fdata].updated==False or len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
-                        #    continue
-                        xindexes.append(fdata)
-                        #curclique=[]
-                        #prvfoundout=-1
-                        #if len(prvGlobalIndexData)!=0:
-                        #    for single in prvGlobalIndexData:
-                        #        if cameras[i].PersonData[fdata].globalPersonIndex in single:
-                        #            curclique=single
-                        #            prvfoundout=single[0]
-                        #            break;
-                        y=0
-                        #triplet=test(cameras[i].PersonData[fdata].imgs[0],stackedimgages[0])
-                        #for pos in range(1,imgsSaved):
-                        #    triplet=np.add(triplet,test(cameras[i].PersonData[fdata].imgs[pos],stackedimgages[pos]))
-                        bbox=cameras[i].PersonData[fdata].lastPosition
-                        triplet=test(cv2.resize(frame[i][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA),stackedimgages)
-                        globalHungarian.append([])
-                        posIndex=0;
-                        for pdata in range(len(cameras[j].PersonData)):
-                            if(cameras[j].PersonData[pdata].globalFoundOutPersonIndex!=-1 or cameras[j].PersonData[pdata].isDisabled or cameras[j].PersonData[pdata].totalFrames<5):
+                stackedimgages=[]
+                for pdata in range(len(cameras[i].PersonData)):
+                    if(cameras[i].PersonData[pdata].globalFoundOutPersonIndex!=-1 or cameras[i].PersonData[pdata].isDisabled or cameras[i].PersonData[pdata].totalFrames<5):
+                        continue;
+                    bbox=cameras[i].PersonData[pdata].lastPosition
+                    stackedimgages.append(cv2.resize(frame[i][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA))
+                if(len(stackedimgages)!=0):
+                    m=np.array(stackedimgages)
+                    allfeatureVector.append(model.predict(m)[0])
+            if(len(allfeatureVector)>=2): 
+                for i in range(len(cameras)):
+                    for j in range(i+1,len(cameras)):
+                        x=0
+                        xindexes=[]
+                        yindexes=[]
+                        #stackedimgages=[]
+                        #for pdata in range(len(cameras[j].PersonData)):
+                        #    if(cameras[j].PersonData[pdata].globalFoundOutPersonIndex!=-1 or cameras[j].PersonData[pdata].isDisabled or cameras[j].PersonData[pdata].totalFrames<5):
+                        #        continue;
+                        #    bbox=cameras[j].PersonData[pdata].lastPosition
+                        #    stackedimgages.append(cv2.resize(frame[j][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA))
+                        #for pos in range(imgsSaved):
+                        #    stackedimgages.append([])
+                        #    for person in cameras[j].PersonData:
+                        #        if(person.updated==True and len(person.imgs)==imgsSaved):
+                        #            stackedimgages[pos].append(person.imgs[pos])
+                        globalHungarian=find_l2_norm(allfeatureVector[i],allfeatureVector[j])
+                        for fdata in range(len(cameras[i].PersonData)):
+                            if(cameras[i].PersonData[fdata].globalFoundOutPersonIndex!=-1 or cameras[i].PersonData[fdata].isDisabled or cameras[i].PersonData[fdata].totalFrames<5):
                                 continue;
-                            #if(cameras[j].PersonData[pdata].updated==False or len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
+                            #if(cameras[i].PersonData[fdata].updated==False or len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
+                            #if(cameras[i].PersonData[fdata].updated==False or len(cameras[i].PersonData[fdata].imgs)!=imgsSaved):
                             #    continue
-                            #globalHungarian[x].append(triplet[y])
-                            #val=(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))+triplet[y])/(0.9+1.4*imgsSaved)#hsv seems to be max 0.9, triplet max seems to be 1.2
-                            #if cameras[j].PersonData[pdata].globalPersonIndex in curclique or cameras[j].PersonData[pdata].prvglobalFoundOutPersonIndex==prvfoundout:
-                            #    val-=0.2
-                            #globalHungarian[x].append(val)
-                            #globalHungarian[x].append(cv2.compareHist(cameras[j].PersonData[pdata].histogram_h, cameras[i].PersonData[fdata].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5)
-                            globalHungarian[x].append(cv2.compareHist(cameras[j].PersonData[pdata].histogram_h, cameras[i].PersonData[fdata].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5+triplet[posIndex]*0.5)
-                            posIndex+=1
-                            if(x==0):
-                                yindexes.append(pdata)
-                            #globalHungarian[fdata].append(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h))))
-                            #globalHungarian[fdata].append(triplet[pdata])
-                            y=y+1
-                        x=x+1
-                    if(len(globalHungarian)!=0 and len(globalHungarian[0])!=0):
-                        row_ind, col_ind = assignValues(globalHungarian)
-                        print(globalHungarian)
-                        for pos in range(len(row_ind)):
-                            if(globalHungarian[row_ind[pos]][col_ind[pos]]<0.8):
-                                edges.append((cameras[i].PersonData[xindexes[row_ind[pos]]].globalPersonIndex,cameras[j].PersonData[yindexes[col_ind[pos]]].globalPersonIndex))
-            
-            Allcliques=cliques(edges,len(cameras),globalPersonCount).getCliques()
-            print(Allcliques)
+                            xindexes.append(fdata)
+                            #curclique=[]
+                            #prvfoundout=-1
+                            #if len(prvGlobalIndexData)!=0:
+                            #    for single in prvGlobalIndexData:
+                            #        if cameras[i].PersonData[fdata].globalPersonIndex in single:
+                            #            curclique=single
+                            #            prvfoundout=single[0]
+                            #            break;
+                            y=0
+                            #triplet=test(cameras[i].PersonData[fdata].imgs[0],stackedimgages[0])
+                            #for pos in range(1,imgsSaved):
+                            #    triplet=np.add(triplet,test(cameras[i].PersonData[fdata].imgs[pos],stackedimgages[pos]))
+                            #bbox=cameras[i].PersonData[fdata].lastPosition
+                            #triplet=test(cv2.resize(frame[i][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA),stackedimgages)
+                            #globalHungarian.append([])
+                            for pdata in range(len(cameras[j].PersonData)):
+                                if(cameras[j].PersonData[pdata].globalFoundOutPersonIndex!=-1 or cameras[j].PersonData[pdata].isDisabled or cameras[j].PersonData[pdata].totalFrames<5):
+                                    continue;
+                                #if(cameras[j].PersonData[pdata].updated==False or len(cameras[j].PersonData[pdata].imgs)!=imgsSaved):
+                                #    continue
+                                #globalHungarian[x].append(triplet[y])
+                                #val=(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h)))+triplet[y])/(0.9+1.4*imgsSaved)#hsv seems to be max 0.9, triplet max seems to be 1.2
+                                #if cameras[j].PersonData[pdata].globalPersonIndex in curclique or cameras[j].PersonData[pdata].prvglobalFoundOutPersonIndex==prvfoundout:
+                                #    val-=0.2
+                                #globalHungarian[x].append(val)
+                                #globalHungarian[x].append(cv2.compareHist(cameras[j].PersonData[pdata].histogram_h, cameras[i].PersonData[fdata].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5)
+                                globalHungarian[x][y]=globalHungarian[x][y]*0.5+cv2.compareHist(cameras[j].PersonData[pdata].histogram_h, cameras[i].PersonData[fdata].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5
+                                if(x==0):
+                                    yindexes.append(pdata)
+                                #globalHungarian[fdata].append(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h))))
+                                #globalHungarian[fdata].append(triplet[pdata])
+                                y=y+1
+                            x=x+1
+                        if(len(globalHungarian)!=0 and len(globalHungarian[0])!=0):
+                            row_ind, col_ind = assignValues(globalHungarian)
+                            for pos in range(len(row_ind)):
+                                if(globalHungarian[row_ind[pos]][col_ind[pos]]<0.7):
+                                    edges.append((cameras[i].PersonData[xindexes[row_ind[pos]]].globalPersonIndex,cameras[j].PersonData[yindexes[col_ind[pos]]].globalPersonIndex))
+                
+                Allcliques=cliques(edges,len(cameras),globalPersonCount).getCliques()
 
-            for sclique in Allcliques:
-                globalPersonData.append(GlobalPersonData());
-                bbox=cameras[localgloballink[sclique[0]-1][1]].PersonData[localgloballink[sclique[0]-1][2]].lastPosition
-                globalPersonData[len(globalPersonData)-1].personImages.append(cv2.resize(frame[index][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA))
-                globalPersonData[len(globalPersonData)-1].personzindexinCameras=np.full(len(cameras),-1)
-                cameras[localgloballink[sclique[0]-1][1]].PersonData[localgloballink[sclique[0]-1][2]].globalFoundOutPersonIndex=len(globalPersonData)-1
-                globalPersonData[len(globalPersonData)-1].histogram_h=cameras[localgloballink[sclique[0]-1][1]].PersonData[localgloballink[sclique[0]-1][2]].histogram_h
-                for i in range(1,len(sclique)):
-                    bbox=cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].lastPosition
+                for sclique in Allcliques:
+                    globalPersonData.append(GlobalPersonData());
+                    bbox=cameras[localgloballink[sclique[0]-1][1]].PersonData[localgloballink[sclique[0]-1][2]].lastPosition
                     globalPersonData[len(globalPersonData)-1].personImages.append(cv2.resize(frame[index][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA))
-                    cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].globalFoundOutPersonIndex=len(globalPersonData)-1
-                    globalPersonData[len(globalPersonData)-1].histogram_h=np.multiply(np.add(cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].histogram_h,globalPersonData[len(globalPersonData)-1].histogram_h),0.5)
-            
+                    globalPersonData[len(globalPersonData)-1].personzindexinCameras=np.full(len(cameras),-1)
+                    cameras[localgloballink[sclique[0]-1][1]].PersonData[localgloballink[sclique[0]-1][2]].globalFoundOutPersonIndex=len(globalPersonData)-1
+                    globalPersonData[len(globalPersonData)-1].histogram_h=cameras[localgloballink[sclique[0]-1][1]].PersonData[localgloballink[sclique[0]-1][2]].histogram_h
+                    for i in range(1,len(sclique)):
+                        bbox=cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].lastPosition
+                        globalPersonData[len(globalPersonData)-1].personImages.append(cv2.resize(frame[index][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA))
+                        cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].globalFoundOutPersonIndex=len(globalPersonData)-1
+                        globalPersonData[len(globalPersonData)-1].histogram_h=np.multiply(np.add(cameras[localgloballink[sclique[i]-1][1]].PersonData[localgloballink[sclique[i]-1][2]].histogram_h,globalPersonData[len(globalPersonData)-1].histogram_h),0.5)
+                
 
             #for cam in cameras:
             #    for person in cam.PersonData:
@@ -922,7 +937,7 @@ def main(yolo):
                 for person in cameras[cam].PersonData:
                     if person.updated==True:
                         cv2.rectangle(frame[cam], (int(person.lastPosition[0]), int(person.lastPosition[1])), (int(person.lastPosition[2]), int(person.lastPosition[3])), (255, 0, 0), 2)
-                        cv2.putText(frame[cam],str(person.globalFoundOutPersonIndex) ,(int(person.top),int(person.middle)),0, 1e-3 * frame[index].shape[0], (0,255,0),2)
+                        cv2.putText(frame[cam],str(person.globalFoundOutPersonIndex) ,(int(person.top),int(person.middle)+10),0, 1e-3 * frame[index].shape[0], (0,255,0),2)
 
             
 
