@@ -452,9 +452,9 @@ def main(yolo):
         cameras.append(Camera())
         #prvTimes.append(time.time())
 
-    for h in range(400):
-        for i in range(len(video_captures)):
-            video_captures[i].read();
+    #for h in range(400):
+    #    for i in range(len(video_captures)):
+    #        video_captures[i].read();
     #if asyncVideo_flag:
     #    video_capture.start()
 
@@ -759,6 +759,8 @@ def main(yolo):
             for person in cameras[0].PersonData:
                 if(person.updated==True):
                     cv2.putText(frame[0],str(person.localPersonIndex) ,(int(person.top), int(person.middle)),0, 1e-3 * frame[index].shape[0], (0,255,0),1)
+                        cv2.rectangle(frame[cam], (int(person.lastPosition[0]), int(person.lastPosition[1])), (int(person.lastPosition[2]), int(person.lastPosition[3])), (255, 0, 0), 2)
+
                 #if(person.updated==True):
                 #    hypos.append(person.localPersonIndex+1)
                 #    hyposPos.append([person.top,person.left])
