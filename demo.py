@@ -417,8 +417,8 @@ def main(yolo):
     writeVideo_flag = True
     asyncVideo_flag = False
     #file path for videos input
-    file_path = ['out_6.mp4']
-    #file_path = ['vid_1.mp4','vid_2.mp4','vid_3.mp4','vid_4.mp4']
+    #file_path = ['out_6.mp4']
+    file_path = ['vid_1.mp4','vid_2.mp4','vid_3.mp4','vid_4.mp4']
     #file_path = ['4p-c0.avi','4p-c1.avi','4p-c2.avi','4p-c3.avi']
     #file_path = ['terrace1-c0.avi','terrace1-c1.avi','terrace1-c2.avi','terrace1-c3.avi']
     #calulating number of row and columns based on number of videos input
@@ -497,7 +497,8 @@ def main(yolo):
         cur_save_count=cur_save_count+1
         #image saved in current run
         #allimages=[]
-        
+        #getting current time for file output
+        t1 = time.time()
         for index in range(len(file_path)):
             #getting current time for kalman filter
             #cur=time.time()
@@ -508,8 +509,7 @@ def main(yolo):
             ret, frame[index] = video_captures[index].read()  # frame shape 640*480*3
             if ret != True:
                  break
-            #getting current time for file output
-            t1 = time.time()
+
             #changing image from bgr to rgb
             image = Image.fromarray(frame[index][...,::-1])  # bgr to rgb
             #running yolo
@@ -846,6 +846,7 @@ def main(yolo):
             globalHungarian=[]
             allfeatureVector=[]
             newcameradata=[]
+            lasti=0;
             for i in range(len(cameras)):
                 stackedimgages=[]
                 for pdata in range(len(cameras[i].PersonData)):
@@ -854,20 +855,19 @@ def main(yolo):
                     bbox=cameras[i].PersonData[pdata].lastPosition
                     stackedimgages.append(cv2.resize(frame[i][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA))
                 if(len(stackedimgages)!=0):
-                    newcameradata.append(i)
+                    newcameradata.append(lasti)
+                    lasti+=1
                     m=np.array(stackedimgages)
                     allfeatureVector.append(model.predict(m)[0])
+                else:
+                    newcameradata.append(-1)
             if(len(allfeatureVector)>=2): 
-                actuali=-1
                 for i in range(len(cameras)):
-                    if(i not in newcameradata):
+                    if(newcameradata[i]==-1):
                         continue;
-                    actualj=-1
-                    actuali+=1
                     for j in range(i+1,len(cameras)):
-                        if(j not in newcameradata):
+                        if(newcameradata[j]==-1):
                             continue;
-                        actualj+=1
                         
                         x=0
                         xindexes=[]
@@ -883,7 +883,7 @@ def main(yolo):
                         #    for person in cameras[j].PersonData:
                         #        if(person.updated==True and len(person.imgs)==imgsSaved):
                         #            stackedimgages[pos].append(person.imgs[pos])
-                        globalHungarian=find_l2_norm(allfeatureVector[actuali],allfeatureVector[actualj])
+                        globalHungarian=find_l2_norm(allfeatureVector[newcameradata[i]],allfeatureVector[newcameradata[j]])
                         for fdata in range(len(cameras[i].PersonData)):
                             if(cameras[i].PersonData[fdata].globalFoundOutPersonIndex!=-1 or cameras[i].PersonData[fdata].isDisabled or cameras[i].PersonData[fdata].totalFrames<5):
                                 continue;
