@@ -810,7 +810,7 @@ def main(yolo):
                         row_ind, col_ind = assignValues(globalHungarian)
                         #print(globalHungarian);
                         for pos in range(len(row_ind)):
-                            if(globalHungarian[row_ind[pos]][col_ind[pos]]<0.6):
+                            if(globalHungarian[row_ind[pos]][col_ind[pos]]<0.65):
                                 if(cameras[k].PersonData[rowsIndexes[row_ind[pos]]].prvglobalFoundOutPersonIndex==col_ind[pos]):
                                     cameras[k].PersonData[rowsIndexes[row_ind[pos]]].globalSameTimes+=1
                                 else:
