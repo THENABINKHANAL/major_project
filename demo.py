@@ -417,8 +417,8 @@ def main(yolo):
     writeVideo_flag = True
     asyncVideo_flag = False
     #file path for videos input
-    #file_path = ['vid_3.mp4','vid_4.mp4']
-    file_path = ['vid_1.mp4','vid_2.mp4','vid_3.mp4','vid_4.mp4']
+    file_path = ['out_6.mp4']
+    #file_path = ['vid_1.mp4','vid_2.mp4','vid_3.mp4','vid_4.mp4']
     #file_path = ['4p-c0.avi','4p-c1.avi','4p-c2.avi','4p-c3.avi']
     #file_path = ['terrace1-c0.avi','terrace1-c1.avi','terrace1-c2.avi','terrace1-c3.avi']
     #calulating number of row and columns based on number of videos input
