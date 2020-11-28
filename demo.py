@@ -759,7 +759,7 @@ def main(yolo):
             for person in cameras[0].PersonData:
                 if(person.updated==True):
                     cv2.putText(frame[0],str(person.localPersonIndex) ,(int(person.top), int(person.middle)),0, 1e-3 * frame[index].shape[0], (0,255,0),1)
-                    cv2.rectangle(frame[cam], (int(person.lastPosition[0]), int(person.lastPosition[1])), (int(person.lastPosition[2]), int(person.lastPosition[3])), (255, 0, 0), 2)
+                    cv2.rectangle(frame[0], (int(person.lastPosition[0]), int(person.lastPosition[1])), (int(person.lastPosition[2]), int(person.lastPosition[3])), (255, 0, 0), 2)
 
                 #if(person.updated==True):
                 #    hypos.append(person.localPersonIndex+1)
