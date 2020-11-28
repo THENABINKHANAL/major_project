@@ -645,7 +645,7 @@ def main(yolo):
             if(nodata!=0):
                 row_ind=[]
                 col_ind=[]
-                if(hungarianmatrix!=[]):
+                if(len(hungarianmatrix)!=0 and len(hungarianmatrix[0])!=0):
                     row_ind, col_ind=assignValues(hungarianmatrix)
                 indexx=0;
                 for pos in range(len(col_ind)):
@@ -806,7 +806,7 @@ def main(yolo):
                     for i in range(len(cameras[k].PersonData)):
                             cameras[k].PersonData[i].globalFoundOutPersonIndex=-1
 
-                    if(len(globalHungarian)!=0):
+                    if(len(globalHungarian)!=0 and len(globalHungarian[0])!=0):
                         row_ind, col_ind = assignValues(globalHungarian)
                         #print(globalHungarian);
                         for pos in range(len(row_ind)):
