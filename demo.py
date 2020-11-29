@@ -791,7 +791,7 @@ def main(yolo):
                         for j in range(len(globalPersonData)):
                             decrement=0
                             if(globalPersonData[j].personzindexinCameras[k]==i):
-                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.4/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
+                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.01/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
                             #    #if(cameras[k].PersonData[i].globaldissimilarity<0.3):
                             #    #print("decrement ",decrement)
                             #    #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-decrement)
@@ -920,7 +920,7 @@ def main(yolo):
                                 #globalHungarian[x].append(val)
                                 #globalHungarian[x][y]=cv2.compareHist(cameras[j].PersonData[pdata].histogram_h, cameras[i].PersonData[fdata].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*1.8
                                 #globalHungarian[x][y]=globalHungarian[x][y]*0.5+cv2.compareHist(cameras[j].PersonData[pdata].histogram_h, cameras[i].PersonData[fdata].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2
-                                globalHungarian[x][y]=min(atan(max(globalHungarian[x][y],0.4)-0.4),1)
+                                globalHungarian[x][y]=min(math.atan(max(globalHungarian[x][y],0.4)-0.4),1)
                                 if(x==0):
                                     yindexes.append(pdata)
                                 #globalHungarian[fdata].append(np.sum(np.absolute(np.subtract(cameras[j].PersonData[pdata].histogram_h,cameras[i].PersonData[fdata].histogram_h))))
