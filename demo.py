@@ -789,9 +789,10 @@ def main(yolo):
                         bbox=cameras[k].PersonData[i].lastPosition
                         img=cv2.resize(frame[index][int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])], (64,128), interpolation = cv2.INTER_AREA)
                         for j in range(len(globalPersonData)):
-                            #if(globalPersonData[j].personzindexinCameras[k]==i):
+                            decrement=0
+                            if(globalPersonData[j].personzindexinCameras[k]==i):
+                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.1/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
                             #    #if(cameras[k].PersonData[i].globaldissimilarity<0.3):
-                            #    decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.4/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
                             #    #print("decrement ",decrement)
                             #    #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-decrement)
                             #    #val=test(img,globalPersonData[j].personImages)
@@ -801,7 +802,7 @@ def main(yolo):
                             #    #    globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-(1/(1+1/cameras[k].PersonData[i].globalSameTimes))*0.1)
                             #else:
                             val=test(img,globalPersonData[j].personImages)
-                            globalHungarian[len(globalHungarian)-1].append(np.sum(np.minimum(np.arctan(np.subtract(np.maximum(val,0.4),0.4)),1))/len(globalPersonData[j].personImages))
+                            globalHungarian[len(globalHungarian)-1].append(np.sum(np.minimum(np.arctan(np.subtract(np.maximum(val,0.4),0.4)),1))/len(globalPersonData[j].personImages)-decrement)
                                 #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5+np.sum(val)/(len(globalPersonData[j].personImages)*1.2)*0.5)
                                 #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*2)
                     for i in range(len(cameras[k].PersonData)):
