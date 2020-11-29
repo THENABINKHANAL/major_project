@@ -419,7 +419,7 @@ def main(yolo):
     #file path for videos input
     #file_path = ['out_6.mp4']
     file_path = ['vid_1.mp4','vid_2.mp4','vid_3.mp4','vid_4.mp4']
-    #file_path = ['4p-c0.avi','4p-c1.avi','4p-c2.avi','4p-c3.avi']
+    file_path = ['4p-c0.avi','4p-c1.avi'] #,'4p-c2.avi','4p-c3.avi']
     #file_path = ['terrace1-c0.avi','terrace1-c1.avi','terrace1-c2.avi','terrace1-c3.avi']
     #calulating number of row and columns based on number of videos input
     cols=math.ceil(math.sqrt(len(file_path)))
@@ -791,7 +791,7 @@ def main(yolo):
                         for j in range(len(globalPersonData)):
                             decrement=0
                             if(globalPersonData[j].personzindexinCameras[k]==i):
-                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.2/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
+                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.8/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
                             #    #if(cameras[k].PersonData[i].globaldissimilarity<0.3):
                             #    #print("decrement ",decrement)
                             #    #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-decrement)
