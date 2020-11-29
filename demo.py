@@ -791,7 +791,7 @@ def main(yolo):
                         for j in range(len(globalPersonData)):
                             decrement=0
                             if(globalPersonData[j].personzindexinCameras[k]==i):
-                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.01/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
+                                decrement=(1/(1+5/cameras[k].PersonData[i].globalSameTimes))*0.2/((1+cameras[k].PersonData[i].globaldissimilarity)**4)
                             #    #if(cameras[k].PersonData[i].globaldissimilarity<0.3):
                             #    #print("decrement ",decrement)
                             #    #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-decrement)
