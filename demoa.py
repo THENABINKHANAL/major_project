@@ -405,7 +405,7 @@ def main(yolo):
     writeVideo_flag = True
     asyncVideo_flag = False
     #file path for videos input
-    file_path = ['vid_1.mp4','vid_2.mp4']
+    file_path = ['out.mp4']
     #calulating number of row and columns based on number of videos input
     cols=math.ceil(math.sqrt(len(file_path)))
     rows=math.ceil(len(file_path)/cols)
@@ -437,9 +437,9 @@ def main(yolo):
         cameras.append(Camera())
         #prvTimes.append(time.time())
 
-    for h in range(400):
-        for i in range(len(video_captures)):
-            video_captures[i].read();
+    #for h in range(400):
+    #    for i in range(len(video_captures)):
+    #        video_captures[i].read();
     #if asyncVideo_flag:
     #    video_capture.start()
 
@@ -546,7 +546,7 @@ def main(yolo):
                 cameras[index].PersonData[ind].updated=False;
                 score=frame_index-cameras[index].PersonData[ind].lastFrame;
                 kalman_pos=cameras[index].PersonData[ind].kf.x
-                #cv2.putText(frame[index],str(cameras[index].PersonData[ind].localPersonIndex) ,(int(cameras[index].PersonData[ind].top+kalman_pos[0][0]*(score)), int(cameras[index].PersonData[ind].middle+kalman_pos[1][0]*(score))),0, 1e-3 * frame[index].shape[0], (0,0,255),1)
+                cv2.putText(frame[index],str(cameras[index].PersonData[ind].localPersonIndex) ,(int(cameras[index].PersonData[ind].top+kalman_pos[0][0]*(score)), int(cameras[index].PersonData[ind].middle+kalman_pos[1][0]*(score))),0, 1e-3 * frame[index].shape[0], (0,0,255),3)
                 ypos=cameras[index].PersonData[ind].top-cameras[index].PersonData[ind].kf.x[0][0]*(score)
                 xpos=cameras[index].PersonData[ind].middle-cameras[index].PersonData[ind].kf.x[2][0]*(score)
                 if(xpos<0 or xpos>frame[index].shape[0] or ypos<0 or ypos>frame[index].shape[1] or cameras[index].PersonData[ind].totalFrames<5):
@@ -619,19 +619,20 @@ def main(yolo):
                         #mahal=(np.sum(np.absolute(np.subtract(histogram_h,cameras[index].PersonData[z].histogram_h))))/(bbox[1]+bbox[3])/10
                         #mahal=(ks_2samp(histogram_h,cameras[index].PersonData[z].histogram_h))[1]
                         #mahal=(distance.cosine(histogram_h,cameras[index].PersonData[z].histogram_h))*2 # is the best fit
-                        mahal+=cv2.compareHist(histogram_h, cameras[index].PersonData[z].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**4*1.5
+                        mahal+=cv2.compareHist(histogram_h, cameras[index].PersonData[z].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**4*3
                         #mahal+=(ttest_ind(histogram_h,cameras[index].PersonData[z].histogram_h))[1]
                         #mahal*=(1000/(1000+cameras[index].PersonData[z].totalFrames))
                         if(cameras[index].PersonData[z].totalFrames<5):
                             mahal+=(5-cameras[index].PersonData[z].totalFrames)/40
                         hungarianmatrix[indexx].append(mahal)
                     indexx=indexx+1
-            #print(hungarianmatrix)
+            print(hungarianmatrix)
             if(nodata!=0):
                 row_ind=[]
                 col_ind=[]
                 if(hungarianmatrix!=[]):
                     row_ind, col_ind=assignValues(hungarianmatrix)
+                    print(row_ind,col_ind)
                 indexx=0;
                 for pos in range(len(col_ind)):
                     if(hungarianmatrix[row_ind[pos]][col_ind[pos]]<2-detections[row_ind[pos]].confidence):
@@ -743,7 +744,9 @@ def main(yolo):
             #hyposPos=[];
             for person in cameras[0].PersonData:
                 if(person.updated==True):
-                    cv2.putText(frame[0],str(person.localPersonIndex) ,(int(person.top), int(person.middle)),0, 1e-3 * frame[index].shape[0], (0,255,0),1)
+                    cv2.putText(frame[0],str(person.localPersonIndex) ,(int(person.top), int(person.middle)),0, 1e-3 * frame[index].shape[0], (0,255,0),2)
+                    cv2.rectangle(frame[0], (int(person.lastPosition[0]), int(person.lastPosition[1])), (int(person.lastPosition[2]), int(person.lastPosition[3])), (255, 0, 0), 2)
+
                 #if(person.updated==True):
                 #    hypos.append(person.localPersonIndex+1)
                 #    hyposPos.append([person.top,person.left])
@@ -922,7 +925,7 @@ def main(yolo):
                 for person in cameras[cam].PersonData:
                     if person.updated==True:
                         cv2.rectangle(frame[cam], (int(person.lastPosition[0]), int(person.lastPosition[1])), (int(person.lastPosition[2]), int(person.lastPosition[3])), (255, 0, 0), 2)
-                        cv2.putText(frame[cam],str(person.globalFoundOutPersonIndex) ,(int(person.top),int(person.middle)),0, 1e-3 * frame[index].shape[0], (0,255,0),2)
+                        cv2.putText(frame[cam],str(person.globalFoundOutPersonIndex) ,(int(person.top),int(person.middle)),0, 1e-3 * frame[index].shape[0], (0,255,0),5)
 
             
 

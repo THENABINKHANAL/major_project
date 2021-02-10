@@ -23,7 +23,7 @@ from deep_sort.tracker import Tracker
 from tools import generate_detections as gdet
 import imutils.video
 from videocaptureasync import VideoCaptureAsync
-
+from threading import Thread, Event
 from scipy.spatial import distance
 from scipy.optimize import linear_sum_assignment
 import motmetrics as mm
@@ -34,7 +34,7 @@ import random
 
 import csv
 
-#gt=[];
+gt=[];
 #with open('gt.txt') as csv_file:
 #    csv_reader = csv.reader(csv_file, delimiter=',')
 #    line_count = 0
@@ -259,7 +259,7 @@ class GlobalPersonData:
 
 class KalmanFilter:
     def __init__(self, x,std_meas):
-        self.dt = 0.1
+        self.dt = 1
         self.A = np.array([[1, self.dt,0,0],
                             [0, 1,0,0],
                             [0,0,1,self.dt],
@@ -399,7 +399,109 @@ def test(query_img,image_list):
     return distances
 
 
-def main(yolo):
+class yoloDetector(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.first=True
+    def addnewVars(self,frame,detected_output,index):
+        self.frame=frame
+        self.detected_output=detected_output
+        self.index=index
+
+    def run(self):
+        if(self.first):
+            self.yolo=YOLO()
+            self.first=False
+        else:
+            #changing image from bgr to rgb
+            image = Image.fromarray(self.frame[...,::-1])  # bgr to rgb
+            #running yolo
+            boxes, confidence, classes = self.yolo.detect_image(image)
+            
+            #Getting bounding boxes from image data
+
+            detections = [Detection_YOLO(bbox, confidence, cls) for bbox, confidence, cls in
+                        zip(boxes, confidence, classes)]
+
+            # Run non-maxima suppression.
+            boxes = np.array([d.tlwh for d in detections])
+            scores = np.array([d.confidence for d in detections])
+            indices = preprocessing.non_max_suppression(boxes, 1.0, scores)
+            self.detected_output[self.index] = [detections[i] for i in indices]
+
+class ReusableThread(Thread):
+    """
+    This class provides code for a restartale / reusable thread
+
+    join() will only wait for one (target)functioncall to finish
+    finish() will finish the whole thread (after that, it's not restartable anymore)
+        
+    """
+
+    def __init__(self):
+        self._startSignal = Event()
+        self._oneRunFinished = Event()
+        self._finishIndicator = False
+        self.first=True
+
+        Thread.__init__(self)
+
+    def restart(self,frame,detected_output,index):
+        """make sure to always call join() before restarting"""
+        self.frame=frame
+        self.detected_output=detected_output
+        self.index=index
+        self._startSignal.set()
+
+    def run(self):
+        """ This class will reprocess the object "processObject" forever.
+        Through the change of data inside processObject and start signals
+        we can reuse the thread's resources"""
+
+        self.restart(None,None,None)
+        while(True):    
+            # wait until we should process
+            self._startSignal.wait()
+
+            self._startSignal.clear()
+
+            if(self._finishIndicator):# check, if we want to stop
+                self._oneRunFinished.set()
+                return
+            
+            if(self.first):
+                self.yolo=YOLO()
+                self.first=False
+            else:
+                #changing image from bgr to rgb
+                image = Image.fromarray(self.frame[...,::-1])  # bgr to rgb
+                #running yolo
+                boxes, confidence, classes = self.yolo.detect_image(image)
+
+                #Getting bounding boxes from image data
+
+                detections = [Detection_YOLO(bbox, confidence, cls) for bbox, confidence, cls in
+                            zip(boxes, confidence, classes)]
+
+                # Run non-maxima suppression.
+                boxes = np.array([d.tlwh for d in detections])
+                scores = np.array([d.confidence for d in detections])
+                indices = preprocessing.non_max_suppression(boxes, 1.0, scores)
+                self.detected_output[self.index] = [detections[i] for i in indices]
+
+            # notify about the run's end
+            self._oneRunFinished.set()
+
+    def join(self):
+        """ This join will only wait for one single run (target functioncall) to be finished"""
+        self._oneRunFinished.wait()
+        self._oneRunFinished.clear()
+
+    def finish(self):
+        self._finishIndicator = True
+        self.restart()
+        self.join()
+def main():
 
     # Definition of the parameters
     max_cosine_distance = 0.3
@@ -417,9 +519,9 @@ def main(yolo):
     writeVideo_flag = True
     asyncVideo_flag = False
     #file path for videos input
-    #file_path = ['out_6.mp4']
-    file_path = ['vid_1.mp4','vid_2.mp4','vid_3.mp4','vid_4.mp4']
-    file_path = ['4p-c0.avi','4p-c1.avi'] #,'4p-c2.avi','4p-c3.avi']
+    file_path = ['out_6.mp4']
+    #file_path = ['out_9.mp4'] #,'vid_3.mp4','vid_4.mp4']
+    #file_path = ['4p-c0.avi','4p-c1.avi'] #,'4p-c2.avi','4p-c3.avi']
     #file_path = ['terrace1-c0.avi','terrace1-c1.avi','terrace1-c2.avi','terrace1-c3.avi']
     #calulating number of row and columns based on number of videos input
     cols=math.ceil(math.sqrt(len(file_path)))
@@ -452,6 +554,9 @@ def main(yolo):
         cameras.append(Camera())
         #prvTimes.append(time.time())
 
+    yolos=[]
+    for i in range(len(file_path)):
+        yolos.append(yoloDetector())
     #for h in range(400):
     #    for i in range(len(video_captures)):
     #        video_captures[i].read();
@@ -492,6 +597,14 @@ def main(yolo):
 
     prvGlobalIndexData=[]
 
+    yoloDetectors=[]
+    for index in range(len(file_path)):
+        yoloDetectors.append(ReusableThread())
+        yoloDetectors[index].start()
+    for index in range(len(file_path)):
+        yoloDetectors[index].join()
+
+
     #countframe=0;
     while True:
         cur_save_count=cur_save_count+1
@@ -499,6 +612,7 @@ def main(yolo):
         #allimages=[]
         #getting current time for file output
         t1 = time.time()
+        detections=[None] *len(file_path)
         for index in range(len(file_path)):
             #getting current time for kalman filter
             #cur=time.time()
@@ -510,35 +624,20 @@ def main(yolo):
             if ret != True:
                  break
 
-            #changing image from bgr to rgb
-            image = Image.fromarray(frame[index][...,::-1])  # bgr to rgb
-            #running yolo
-            boxes, confidence, classes = yolo.detect_image(image)
-            
-            #Getting bounding boxes from image data
-            if tracking:
-                features = encoder(frame[index], boxes)
+            yoloDetectors[index].restart(frame[index],detections,index)
+        for index in range(len(file_path)):
+            yoloDetectors[index].join()
 
-                detections = [Detection(bbox, confidence, cls, feature) for bbox, confidence, cls, feature in
-                              zip(boxes, confidence, classes, features)]
-            else:
-                detections = [Detection_YOLO(bbox, confidence, cls) for bbox, confidence, cls in
-                              zip(boxes, confidence, classes)]
-
-            # Run non-maxima suppression.
-            boxes = np.array([d.tlwh for d in detections])
-            scores = np.array([d.confidence for d in detections])
-            indices = preprocessing.non_max_suppression(boxes, nms_max_overlap, scores)
-            detections = [detections[i] for i in indices]
+        for index in range(len(file_path)):
             #Got bounding boxes from image data
             
             #writing person detection accuracy and putting a bounding boxes around people
-            for det in detections:
+            for det in detections[index]:
                 bbox = det.to_tlbr()
                 score = "%.2f" % round(det.confidence * 100, 2) + "%"
                 #cv2.rectangle(frame[index], (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
-                if len(classes) > 0:
-                    cls = det.cls
+                #if len(classes) > 0:
+                    #cls = det.cls
                     #cv2.putText(frame[index], str(cls) + " " + score, (int(bbox[0]), int(bbox[3])), 0,
                     #            1e-3 * frame[index].shape[0], (0, 255, 0), 1)
 
@@ -573,8 +672,8 @@ def main(yolo):
 
                 
 
-            #iterating through current detections
-            for det in detections:
+            #iterating through current detections[index]
+            for det in detections[index]:
                 #getting top, left, bottom and right co-ordinated from bounding boxes
                 bbox = det.to_tlbr()
                 #checking if there was no previous person data, initializing all found out persons directly to camera's person data variable
@@ -649,9 +748,9 @@ def main(yolo):
                     row_ind, col_ind=assignValues(hungarianmatrix)
                 indexx=0;
                 for pos in range(len(col_ind)):
-                    if(hungarianmatrix[row_ind[pos]][col_ind[pos]]<2-detections[row_ind[pos]].confidence):
-                        bbox=detections[row_ind[pos]].to_tlbr()
-                        detections[row_ind[pos]].localProcessed=True
+                    if(hungarianmatrix[row_ind[pos]][col_ind[pos]]<2-detections[index][row_ind[pos]].confidence):
+                        bbox=detections[index][row_ind[pos]].to_tlbr()
+                        detections[index][row_ind[pos]].localProcessed=True
                         cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].updated=True
                         lastTop=cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].top
                         lastMiddle=cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].middle
@@ -663,7 +762,7 @@ def main(yolo):
                         #cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].kf.update([[(bbox[0]-lastTop)/(0.1*(frame_index-cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].lastFrame))],[0],[(bbox[1]-lastLeft)/(0.1*(frame_index-cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].lastFrame))],[0]])
                         vy=((bbox[0]+bbox[2])/2-lastTop)/((frame_index-cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].lastFrame))
                         vx=(bbox[1]-lastMiddle)/((frame_index-cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].lastFrame))
-                        toadd=(detections[row_ind[pos]].confidence-0.5)**2
+                        toadd=(detections[index][row_ind[pos]].confidence-0.5)**2
                         #if(cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].totalFrames<5):
                         #    toadd=0.5
                         #cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].kf.update([[vy*part+cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].kf.x[0][0]*(1-part)],[0.5],[vx*part+cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].kf.x[2][0]*(1-part)],[0.5]])
@@ -685,9 +784,9 @@ def main(yolo):
                         if(len(cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].positions)>6):
                             cameras[index].PersonData[hungarianDataIndex[col_ind[pos]]].positions.pop(0);
 
-                for pos in range(len(detections)):
-                    if(hasattr(detections[pos], 'localProcessed')==False):
-                        bbox = detections[pos].to_tlbr()
+                for pos in range(len(detections[index])):
+                    if(hasattr(detections[index][pos], 'localProcessed')==False):
+                        bbox = detections[index][pos].to_tlbr()
                         #if(bbox[1]>hsvImage.shape[0]):
                         #    continue
                         ndata=PersonData()
@@ -727,19 +826,6 @@ def main(yolo):
             #            if(len(pdata.imgs)==imgsSaved+1):
             #                pdata.imgs.pop(0)
             #nabin's code ends
-
-            if tracking:
-                # Call the tracker
-                tracker.predict()
-                tracker.update(detections)
-
-                for track in tracker.tracks:
-                    if not track.is_confirmed() or track.time_since_update > 1:
-                        continue
-                    bbox = track.to_tlbr()
-                    cv2.rectangle(frame[index], (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 2)
-                    cv2.putText(frame[index], "ID: " + str(track.track_id), (int(bbox[0]), int(bbox[1])), 0,
-                                1e-3 * frame[index].shape[0], (0, 255, 0), 1)
 
             #if(len(cameras)==2):
             #globalHungarian=[]
@@ -801,7 +887,7 @@ def main(yolo):
                             #    #else:                           
                             #    #    globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2-(1/(1+1/cameras[k].PersonData[i].globalSameTimes))*0.1)
                             #else:
-                            val=test(img,globalPersonData[j].personImages)
+                            val=test(img,[globalPersonData[j].personImages[k]])
                             globalHungarian[len(globalHungarian)-1].append(np.sum(np.minimum(np.arctan(np.subtract(np.maximum(val,0.4),0.4)),1))/len(globalPersonData[j].personImages)-decrement)
                                 #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*0.5+np.sum(val)/(len(globalPersonData[j].personImages)*1.2)*0.5)
                                 #globalHungarian[len(globalHungarian)-1].append(cv2.compareHist(cameras[k].PersonData[i].histogram_h, globalPersonData[j].histogram_h, cv2.HISTCMP_BHATTACHARYYA)**2*2)
@@ -998,8 +1084,19 @@ def main(yolo):
 
         #if(len(cameras)==1):
         #    mh = mm.metrics.create()
-        #    summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp'], name='acc')
-        #    print(summary)
+        #    summary = mh.compute_many(
+        #        [acc, acc.events.loc[0:1]],
+        #        metrics=mm.metrics.motchallenge_metrics,
+        #        names=['full', 'part'],
+        #        generate_overall=True
+        #        )
+#
+        #    strsummary = mm.io.render_summary(
+        #        summary,
+        #        formatters=mh.formatters,
+        #        namemap=mm.io.motchallenge_metric_names
+        #    )
+        #    print(strsummary)
         cv2.imshow('', out_image)
 
         if writeVideo_flag: # and not asyncVideo_flag:
@@ -1016,14 +1113,17 @@ def main(yolo):
         # Press Q to stop!
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        
+        if(ret!=True):
+            break;
 
     fps_imutils.stop()
     print('imutils FPS: {}'.format(fps_imutils.fps()))
 
-    if asyncVideo_flag:
-        video_capture.stop()
-    else:
-        video_capture.release()
+    #if asyncVideo_flag:
+    #    video_capture.stop()
+    #else:
+    #    video_capture.release()
 
     if writeVideo_flag:
         out.release()
@@ -1031,4 +1131,4 @@ def main(yolo):
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    main(YOLO())
+    main()
